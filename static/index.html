@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+</head>
+
+<body>
+    <h1 id="title">Loading...</h1>
+    <ul id="note-list"></ul>
+    <a href="/add">Add notes</a>
+</body>
+<script defer>
+    async function loadName() {
+        const results = await fetch("/name")
+        const name = await results.text()
+        document.getElementById("title").innerHTML = `Hello ${name}!`
+    }
+
+    async function loadNotes() {
+        const noteListElement = document.getElementById("note-list")
+        const results = await fetch("/notes")
+        const notes = await results.json()
+        for(const note of notes) {
+            const noteTextElement = document.createElement("p")
+            const noteNameElement = document.createElement("h3")
+            console.log(note)
+            noteNameElement.innerHTML = note.name
+            noteTextElement.innerHTML = note.text
+            const noteElement = document.createElement("li")
+            noteElement.appendChild(noteNameElement)
+            noteElement.appendChild(noteTextElement)
+            noteListElement.appendChild(noteElement)
+        }
+    }
+    loadNotes()
+    loadName()
+</script>
+
+</html>
