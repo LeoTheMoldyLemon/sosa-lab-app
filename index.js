@@ -7,24 +7,27 @@ const cookieParser = require("cookie-parser");
 const path = require("node:path");
 let sequelize;
 
+const helmet = require("helmet");
+
 async function createSession(user) {
     const sessionId = crypto.randomBytes(3 * 4).toString("base64"); // nasumično generiraj session ID
     const session = await sequelize.models.Session.create({
-        id: sessionId,
-        userId: user.id,
+        id: sessionId.toString(),
+        userId: user.id.toString(),
     }); // stvori session u bazi podataka
-    console.log(`Creating new session for user ${user.name} with id ${sessionId}`);
     return session;
 }
 
 // Stvori Hash od nekog podatka
 function hash(data) {
-    return crypto.createHash("md5").update(data).digest("base64");
+    return crypto.createHash("sha256").update(data).digest("base64");
 }
 
 async function startServer() {
     const app = express();
 
+    app.use(helmet());
+    app.disable("x-powered-by");
     app.use(express.static("static", { index: false }));
     app.use(express.json());
     app.use(express.urlencoded());
@@ -41,7 +44,7 @@ async function startServer() {
     app.post("/login", async (req, res) => {
         const passwordHash = hash(req.body.password);
         const user = await sequelize.models.User.findOne({
-            where: { name: req.body.name, password: passwordHash },
+            where: { name: req.body.name.toString(), password: passwordHash.toString() },
         });
         if (!user) return res.status(401).end();
         const session = await createSession(user);
@@ -55,8 +58,8 @@ async function startServer() {
 
         const passwordHash = hash(req.body.password);
         const user = await sequelize.models.User.create({
-            name: req.body.name,
-            password: passwordHash,
+            name: req.body.name.toString(),
+            password: passwordHash.toString(),
         });
         const session = await createSession(user);
         res.cookie("session", session.id, { secure: false }); // postavi session ID kao cookie
@@ -68,7 +71,7 @@ async function startServer() {
         if (!req.cookies.session) return res.redirect("/login"); //ako nema session cookie, pošalji na login
 
         const session = await sequelize.models.Session.findOne({
-            where: { ID: req.cookies.session },
+            where: { id: req.cookies.session.toString() },
         });
         if (!session) return res.redirect("/login"); //ako session cookie nije u bazi podataka odi na login
 
@@ -91,16 +94,16 @@ async function startServer() {
 
     app.get("/notes", async (req, res) => {
         const results = await sequelize.models.Note.findAll({
-            where: { userId: req.user.id },
+            where: { userId: req.user.id.toString() },
         });
         res.json(results);
     });
 
     app.post("/note", async (req, res) => {
         try {
-            await sequelize.query(
-                `INSERT INTO Notes (name, text, userId) VALUES ("${req.body.name}","${req.body.text}",${req.user.id});`,
-            );
+            await sequelize.query(`INSERT INTO Notes (name, text, userId) VALUES (?,?,?);`, {
+                replacements: [req.body.name, req.body.text, req.user.id],
+            });
         } catch (err) {
             res.status(500).end();
             return;

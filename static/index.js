@@ -1,7 +1,7 @@
 async function loadName() {
     const results = await fetch("/name");
     const name = await results.text();
-    document.getElementById("title").innerHTML = `Hello ${name}!`;
+    document.getElementById("title").innerHTML = sanitizeHtml(`Hello ${name}!`);
 }
 
 async function loadNotes() {
@@ -11,8 +11,8 @@ async function loadNotes() {
     for (const note of notes) {
         const noteTextElement = document.createElement("p");
         const noteNameElement = document.createElement("h3");
-        noteNameElement.innerHTML = note.name;
-        noteTextElement.innerHTML = note.text;
+        noteNameElement.innerHTML = sanitizeHtml(note.name);
+        noteTextElement.innerHTML = sanitizeHtml(note.text);
         const noteElement = document.createElement("li");
         noteElement.appendChild(noteNameElement);
         noteElement.appendChild(noteTextElement);
